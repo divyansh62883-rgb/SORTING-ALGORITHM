@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sorting Algorithm Visualizer – DSA Mini Project</title>
+<style>
+:root{--bg:#f3f6f9;--card:#fff;--tx:#12202e;--mu:#5a6b7b;--bd:#d9e1e8;--bar:#2b7a9b;--cmp:#f2a900;--swp:#e03e52;--ok:#1f9d6b;--ac:#12202e;--tint:#e3eef4;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#0e1620;--card:#16212d;--tx:#e6edf3;--mu:#8fa1b2;--bd:#28384a;--bar:#4fb0d4;--cmp:#f5b83a;--swp:#ff6b7d;--ok:#3ccf91;--ac:#4fb0d4;--tint:#1c2d3d}}
+:root[data-theme=dark]{--bg:#0e1620;--card:#16212d;--tx:#e6edf3;--mu:#8fa1b2;--bd:#28384a;--bar:#4fb0d4;--cmp:#f5b83a;--swp:#ff6b7d;--ok:#3ccf91;--ac:#4fb0d4;--tint:#1c2d3d}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:1000px;margin:0 auto;padding:16px}
+h1{font-size:1.6rem;margin:.1em 0;letter-spacing:-.01em}h2{font-size:1.1rem;margin:0 0 .3em}
+.mu,small{color:var(--mu)}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:14px;margin:12px 0}
+.row{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin:8px 0}
+label{display:flex;gap:6px;align-items:center;font-size:.9rem}
+select,input,button{font:inherit;padding:6px 10px;border:1px solid var(--bd);border-radius:8px;background:var(--card);color:var(--tx)}
+input[type=range]{padding:0;width:110px}input[type=checkbox]{width:auto}
+button{cursor:pointer}button.p{background:var(--ac);color:var(--bg);border-color:var(--ac);font-weight:600}
+#cv{width:100%;height:clamp(200px,38vh,320px);display:block;background:var(--card);border:1px solid var(--bd);border-radius:10px}
+.stats{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:.9rem;margin:10px 0;align-items:center}
+i{display:inline-block;width:10px;height:10px;border-radius:2px;margin:0 4px 0 8px}
+.cx{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}.cx span{background:var(--tint);border-radius:8px;padding:4px 12px;display:flex;flex-direction:column}
+.sc{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:.9rem}th,td{padding:6px 8px;text-align:left;border-bottom:1px solid var(--bd);white-space:nowrap}
+td.b{background:linear-gradient(90deg,var(--tint) var(--p),transparent 0)}
+</style></head><body><main>
+<h1>Sorting Algorithm Visualizer</h1>
+<p class="mu">DSA mini project: watch 12 sorting algorithms work step by step, then compare them on the same data.</p>
+<div class="row">
+<label>Algorithm <select id="alg"></select></label>
+<label>Data <select id="kind"><option value="rand">Random<option value="near">Nearly sorted<option value="rev">Reversed<option value="few">Few unique<option value="sorted">Already sorted</select></label>
+<label>Size <input id="size" type="range" min="5" max="150" value="40"><output id="sv">40</output></label>
+<label>Speed <input id="spd" type="range" min="1" max="10" value="5"></label>
+</div>
+<div class="row">
+<button id="go" class="p">▶ Start</button><button id="step">Step</button><button id="rst">Reset</button><button id="new">New array</button><button id="cmp">Compare all</button>
+<input id="cus" type="text" placeholder="Custom values, e.g. 40, 7, 93, 15"><button id="use">Use</button>
+<label><input type="checkbox" id="snd">Sound</label><button id="th">Light / dark</button>
+</div>
+<canvas id="cv"></canvas>
+<div class="stats"><span>Comparisons <b id="sc">0</b></span><span>Swaps / writes <b id="sm">0</b></span><span>Steps <b id="ss">0</b></span><b id="st">Ready</b>
+<span><i style="background:var(--cmp)"></i>Comparing<i style="background:var(--swp)"></i>Swap or write<i style="background:var(--ok)"></i>Sorted</span></div>
+<section class="card"><h2 id="nm"></h2><div id="ds"></div><div class="cx" id="cxs"></div></section>
+<section class="card"><h2>Compare all algorithms</h2><p class="mu">Runs every algorithm on the current array and ranks them by measured time. Try it on reversed or nearly sorted data to see best and worst cases.</p><div id="bm" class="sc"></div></section>
+<p class="mu">Shortcuts: Space starts or pauses, Right arrow steps, R makes a new array. Built with plain HTML, CSS and JavaScript.</p>
+</main>
+<script>
+const $=i=>document.getElementById(i),sum=a=>a.reduce((x,y)=>x+y,0);
+/* name, best, average, worst, space, stable, description, generator (yields [type,i,j]: c=compare, s=swap, w=write, h=highlight) */
+const A={
+bubble:['Bubble Sort','O(n)','O(n²)','O(n²)','O(1)',1,'Compares neighbours and swaps them when out of order, so the largest value bubbles to the end on every pass.',function*(a){for(let i=0;i<a.length-1;i++){let f=0;for(let j=0;j<a.length-1-i;j++){yield['c',j,j+1];if(a[j]>a[j+1]){[a[j],a[j+1]]=[a[j+1],a[j]];f=1;yield['s',j,j+1]}}if(!f)return}}],
+selection:['Selection Sort','O(n²)','O(n²)','O(n²)','O(1)',0,'Finds the smallest value in the unsorted part and swaps it into its final position.',function*(a){for(let i=0;i<a.length-1;i++){let m=i;for(let j=i+1;j<a.length;j++){yield['c',j,m];if(a[j]<a[m])m=j}if(m!=i){[a[i],a[m]]=[a[m],a[i]];yield['s',i,m]}}}],
+insertion:['Insertion Sort','O(n)','O(n²)','O(n²)','O(1)',1,'Grows a sorted prefix by inserting each new element into its correct place, like sorting playing cards.',function*(a){for(let i=1;i<a.length;i++)for(let j=i;j>0;j--){yield['c',j-1,j];if(a[j-1]<=a[j])break;[a[j-1],a[j]]=[a[j],a[j-1]];yield['s',j-1,j]}}],
+merge:['Merge Sort','O(n log n)','O(n log n)','O(n log n)','O(n)',1,'Divide and conquer: split the array in halves, sort each half, then merge the two sorted halves.',function*(a){const t=a.slice();function*m(l,r){if(l>=r)return;const d=l+r>>1;yield*m(l,d);yield*m(d+1,r);let i=l,j=d+1,k=l;while(i<=d&&j<=r){yield['c',i,j];t[k++]=a[i]<=a[j]?a[i++]:a[j++]}while(i<=d)t[k++]=a[i++];while(j<=r)t[k++]=a[j++];for(k=l;k<=r;k++){a[k]=t[k];yield['w',k]}}yield*m(0,a.length-1)}],
+quick:['Quick Sort','O(n log n)','O(n log n)','O(n²)','O(log n)',0,'Picks a pivot, moves smaller values to its left and larger values to its right, then repeats on both sides.',function*(a){function*q(l,r){if(l>=r)return;const p=a[r];let i=l;for(let j=l;j<r;j++){yield['c',j,r];if(a[j]<p){[a[i],a[j]]=[a[j],a[i]];yield['s',i,j];i++}}[a[i],a[r]]=[a[r],a[i]];yield['s',i,r];yield*q(l,i-1);yield*q(i+1,r)}yield*q(0,a.length-1)}],
+heap:['Heap Sort','O(n log n)','O(n log n)','O(n log n)','O(1)',0,'Builds a max-heap, then repeatedly moves the root (largest value) to the end and restores the heap.',function*(a){function*h(i,m){for(;;){const l=2*i+1,r=l+1;let x=i;if(l<m){yield['c',l,x];if(a[l]>a[x])x=l}if(r<m){yield['c',r,x];if(a[r]>a[x])x=r}if(x==i)return;[a[i],a[x]]=[a[x],a[i]];yield['s',i,x];i=x}}for(let i=a.length>>1;i>=0;i--)yield*h(i,a.length);for(let e=a.length-1;e>0;e--){[a[0],a[e]]=[a[e],a[0]];yield['s',0,e];yield*h(0,e)}}],
+shell:['Shell Sort','O(n log n)','O(n^1.5)','O(n²)','O(1)',0,'Insertion sort on elements that are far apart, with a gap that shrinks to 1 so the array is almost sorted at the end.',function*(a){for(let g=a.length>>1;g>0;g>>=1)for(let i=g;i<a.length;i++)for(let j=i;j>=g;j-=g){yield['c',j-g,j];if(a[j-g]<=a[j])break;[a[j-g],a[j]]=[a[j],a[j-g]];yield['s',j-g,j]}}],
+counting:['Counting Sort','O(n+k)','O(n+k)','O(n+k)','O(k)',1,'Counts how many times each value occurs, then rewrites the array in order. No comparisons, but it needs a small range of whole numbers.',function*(a){const c=Array(Math.max(...a)+1).fill(0);for(let i=0;i<a.length;i++){c[a[i]]++;yield['h',i]}let k=0;for(let v=0;v<c.length;v++)while(c[v]-->0){a[k]=v;yield['w',k++]}}],
+radix:['Radix Sort','O(d(n+k))','O(d(n+k))','O(d(n+k))','O(n+k)',1,'Sorts digit by digit, from the least significant digit, using a stable counting pass for each digit.',function*(a){const mx=Math.max(...a);for(let e=1;mx/e>=1;e*=10){const o=[],c=Array(10).fill(0);for(const x of a)c[(x/e|0)%10]++;for(let i=1;i<10;i++)c[i]+=c[i-1];for(let i=a.length-1;i>=0;i--)o[--c[(a[i]/e|0)%10]]=a[i];for(let i=0;i<a.length;i++){a[i]=o[i];yield['w',i]}}}],
+cocktail:['Cocktail Shaker Sort','O(n)','O(n²)','O(n²)','O(1)',1,'A two-way bubble sort: it alternates left-to-right and right-to-left passes.',function*(a){let s=0,e=a.length-1,f=1;while(f){f=0;for(let i=s;i<e;i++){yield['c',i,i+1];if(a[i]>a[i+1]){[a[i],a[i+1]]=[a[i+1],a[i]];yield['s',i,i+1];f=1}}e--;if(!f)break;f=0;for(let i=e;i>s;i--){yield['c',i-1,i];if(a[i-1]>a[i]){[a[i-1],a[i]]=[a[i],a[i-1]];yield['s',i-1,i];f=1}}s++}}],
+comb:['Comb Sort','O(n log n)','O(n²)','O(n²)','O(1)',0,'Bubble sort with a large gap that shrinks by a factor of 1.3, so small values near the end move forward quickly.',function*(a){let g=a.length,f=1;while(g>1||f){g=Math.max(1,g*10/13|0);f=0;for(let i=0;i+g<a.length;i++){yield['c',i,i+g];if(a[i]>a[i+g]){[a[i],a[i+g]]=[a[i+g],a[i]];yield['s',i,i+g];f=1}}}}],
+gnome:['Gnome Sort','O(n)','O(n²)','O(n²)','O(1)',1,'Steps forward while neighbours are in order; on a problem it swaps and steps back, like a gnome sorting flower pots.',function*(a){let i=1;while(i<a.length){if(i==0){i++;continue}yield['c',i-1,i];if(a[i-1]<=a[i])i++;else{[a[i-1],a[i]]=[a[i],a[i-1]];yield['s',i-1,i];i--}}}]
+};
+const D=[500,250,120,60,30,15,8,4,4,4],K=[1,1,1,1,1,1,1,1,8,40];
+let arr=[],orig=[],g=null,run=0,tm,c=0,m=0,st=0,hl=[],ht='',done=0,mxv=1,ac;
+$('alg').innerHTML=Object.entries(A).map(([k,v])=>`<option value="${k}">${v[0]}`).join('');
+const cv=$('cv'),cx=cv.getContext('2d');
+function draw(){const r=devicePixelRatio||1,w=cv.clientWidth,h=cv.clientHeight,s=getComputedStyle(document.documentElement),V=n=>s.getPropertyValue(n).trim(),n=arr.length,bw=w/n;cv.width=w*r;cv.height=h*r;cx.setTransform(r,0,0,r,0,0);cx.font='11px system-ui';cx.textAlign='center';
+for(let i=0;i<n;i++){cx.fillStyle=done?V('--ok'):hl.includes(i)?V(ht=='s'||ht=='w'?'--swp':'--cmp'):V('--bar');const bh=arr[i]/mxv*(h-16);cx.fillRect(i*bw+.5,h-bh,Math.max(bw-1,1),bh);if(n<=30){cx.fillStyle=V('--tx');cx.fillText(arr[i],i*bw+bw/2,h-bh-3)}}}
+function gen(){const n=+$('size').value,k=$('kind').value;let a=Array.from({length:n},()=>1+Math.random()*99|0);if(k!='rand'&&k!='few')a.sort((x,y)=>x-y);if(k=='rev')a.reverse();if(k=='near')for(let i=0;i<n/10;i++){const x=Math.random()*n|0,y=Math.random()*n|0;[a[x],a[y]]=[a[y],a[x]]}if(k=='few')a=a.map(v=>(v%5+1)*20);return a}
+function info(){const[n,b,a,w,s,t,d]=A[$('alg').value];$('nm').textContent=n;$('ds').textContent=d;$('cxs').innerHTML=[['Best case',b],['Average case',a],['Worst case',w],['Extra space',s],['Stable',t?'Yes':'No']].map(([k,x])=>`<span><small>${k}</small>${x}</span>`).join('')}
+function stats(s){$('sc').textContent=c;$('sm').textContent=m;$('ss').textContent=st;if(s)$('st').textContent=s}
+function stop(){run=0;clearTimeout(tm);$('go').textContent='▶ Start'}
+function load(a){stop();orig=a.slice();arr=a.slice();g=null;c=m=st=0;hl=[];done=0;mxv=Math.max(...a,1);info();stats('Ready');draw()}
+const newArr=()=>load(gen()),reset=()=>load(orig);
+function finish(){stop();done=1;hl=[];const ok=arr.every((v,i)=>!i||arr[i-1]<=v)&&sum(arr)==sum(orig);stats(ok?'Sorted and verified ✓':'Result is not sorted ✗');draw()}
+function adv(){if(!g)g=A[$('alg').value][7](arr);const r=g.next();if(r.done){finish();return 0}const[t,i,j]=r.value;if(t=='c')c++;else if(t!='h')m++;st++;hl=j==null?[i]:[i,j];ht=t;return 1}
+function beep(){if(!$('snd').checked||!hl.length)return;try{ac=ac||new AudioContext();const o=ac.createOscillator(),q=ac.createGain();o.frequency.value=180+arr[hl[0]]/mxv*900;q.gain.value=.05;o.connect(q);q.connect(ac.destination);o.start();o.stop(ac.currentTime+.06)}catch(e){}}
+function tick(){if(!run)return;const s=$('spd').value-1;let ok=1;for(let k=0;k<K[s]&&ok;k++)ok=adv();if(ok){draw();stats();beep();tm=setTimeout(tick,D[s])}}
+$('go').onclick=()=>{if(run){stop();stats('Paused');return}if(done)reset();run=1;$('go').textContent='⏸ Pause';stats('Sorting…');tick()};
+$('step').onclick=()=>{stop();if(done)reset();if(adv()){draw();stats('Stepping');beep()}};
+$('rst').onclick=reset;$('new').onclick=newArr;$('alg').onchange=reset;$('kind').onchange=newArr;
+$('size').oninput=()=>{$('sv').textContent=$('size').value;newArr()};
+$('use').onclick=()=>{const a=$('cus').value.split(/[\s,]+/).filter(Boolean).map(Number);if(a.length<2||a.length>150||a.some(v=>!Number.isInteger(v)||v<0||v>999)){stats('Enter 2 to 150 whole numbers between 0 and 999');return}$('size').value=a.length;$('sv').textContent=a.length;load(a)};
+$('th').onclick=()=>{const d=document.documentElement,dk=d.dataset.theme?d.dataset.theme=='dark':matchMedia('(prefers-color-scheme:dark)').matches;d.dataset.theme=dk?'light':'dark';draw()};
+$('cmp').onclick=()=>{stop();const R=[];for(const v of Object.values(A)){const b=orig.slice();let x=0,y=0;for(const e of v[7](b)){if(e[0]=='c')x++;else if(e[0]!='h')y++}const t0=performance.now();for(let r=0;r<30;r++)for(const e of v[7](orig.slice()));R.push({n:v[0],c:x,m:y,t:(performance.now()-t0)/30,ok:b.every((q,i)=>!i||b[i-1]<=q)})}
+R.sort((p,q)=>p.t-q.t);const mc=Math.max(...R.map(r=>r.c),1),mm=Math.max(...R.map(r=>r.m),1),mt=Math.max(...R.map(r=>r.t),1e-9);
+$('bm').innerHTML=`<p class="mu">Tested on the current array of ${orig.length} elements.</p><table><tr><th>Rank<th>Algorithm<th>Comparisons<th>Swaps / writes<th>Time (ms)`+R.map((r,i)=>`<tr><td>${i+1}<td>${r.n}${r.ok?'':' ✗'}<td class="b" style="--p:${r.c/mc*100}%">${r.c}<td class="b" style="--p:${r.m/mm*100}%">${r.m}<td class="b" style="--p:${r.t/mt*100}%">${r.t.toFixed(3)}`).join('')+'</table>'};
+onkeydown=e=>{if(e.target!=document.body)return;if(e.key==' '){e.preventDefault();$('go').click()}else if(e.key=='ArrowRight')$('step').click();else if(e.key=='r')$('new').click()};
+onresize=draw;newArr();
+</script></body></html>
